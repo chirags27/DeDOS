@@ -1,0 +1,369 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - unnamed - runtime/local_msu.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">runtime</a> - local_msu.c<span style="font-size: 80%;"> (source / <a href="local_msu.c.func.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">unnamed</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">89</td>
+            <td class="headerCovTableEntry">132</td>
+            <td class="headerCovTableEntryLo">67.4 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2017-11-27</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntryHi">91.7 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<span class="lineNum">       2 </span>            : START OF LICENSE STUB
+<span class="lineNum">       3 </span>            :     DeDOS: Declarative Dispersion-Oriented Software
+<span class="lineNum">       4 </span>            :     Copyright (C) 2017 University of Pennsylvania
+<span class="lineNum">       5 </span>            : 
+<span class="lineNum">       6 </span>            :     This program is free software: you can redistribute it and/or modify
+<span class="lineNum">       7 </span>            :     it under the terms of the GNU General Public License as published by
+<span class="lineNum">       8 </span>            :     the Free Software Foundation, either version 3 of the License, or
+<span class="lineNum">       9 </span>            :     (at your option) any later version.
+<span class="lineNum">      10 </span>            : 
+<span class="lineNum">      11 </span>            :     This program is distributed in the hope that it will be useful,
+<span class="lineNum">      12 </span>            :     but WITHOUT ANY WARRANTY; without even the implied warranty of
+<span class="lineNum">      13 </span>            :     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+<span class="lineNum">      14 </span>            :     GNU General Public License for more details.
+<span class="lineNum">      15 </span>            : 
+<span class="lineNum">      16 </span>            :     You should have received a copy of the GNU General Public License
+<span class="lineNum">      17 </span>            :     along with this program.  If not, see &lt;http://www.gnu.org/licenses/&gt;.
+<span class="lineNum">      18 </span>            : END OF LICENSE STUB
+<span class="lineNum">      19 </span>            : */
+<span class="lineNum">      20 </span>            : /**
+<span class="lineNum">      21 </span>            :  * @file local_msu.c
+<span class="lineNum">      22 </span>            :  * Defines the structures and functions used by MSUs on the local machine
+<span class="lineNum">      23 </span>            :  */
+<span class="lineNum">      24 </span>            : 
+<span class="lineNum">      25 </span>            : #include &quot;local_msu.h&quot;
+<span class="lineNum">      26 </span>            : #include &quot;routing_strategies.h&quot;
+<span class="lineNum">      27 </span>            : #include &quot;logging.h&quot;
+<span class="lineNum">      28 </span>            : #include &quot;rt_stats.h&quot;
+<span class="lineNum">      29 </span>            : #include &quot;msu_message.h&quot;
+<span class="lineNum">      30 </span>            : #include &quot;inter_runtime_messages.h&quot;
+<span class="lineNum">      31 </span>            : #include &quot;thread_message.h&quot;
+<span class="lineNum">      32 </span>            : #include &quot;msu_state.h&quot;
+<span class="lineNum">      33 </span>            : 
+<span class="lineNum">      34 </span>            : #include &lt;stdlib.h&gt;
+<span class="lineNum">      35 </span>            : 
+<span class="lineNum">      36 </span>            : /**
+<span class="lineNum">      37 </span>            :  * MOVEME: MAX_MSU_ID
+<span class="lineNum">      38 </span>            :  * Defines the maximum ID that can be assigned to an MSU.
+<span class="lineNum">      39 </span>            :  * Necessary becaues MSUs are indexed by ID in the local registry.
+<span class="lineNum">      40 </span>            :  */
+<span class="lineNum">      41 </span>            : #define MAX_MSU_ID 1024
+<span class="lineNum">      42 </span>            : 
+<span class="lineNum">      43 </span>            : // TODO: This lock might not be useful, as I believe this registry will
+<span class="lineNum">      44 </span>            : // TODO: only ever be accessed from the socket handler thread
+<span class="lineNum">      45 </span>            : 
+<span class="lineNum">      46 </span>            : /** Lock to protect access to local msu registry */
+<span class="lineNum">      47 </span>            : pthread_rwlock_t msu_registry_lock;
+<span class="lineNum">      48 </span>            : /** Mapping of MSU ID to the specific instance of the local MSU */
+<span class="lineNum">      49 </span>            : struct local_msu *local_msu_registry[MAX_MSU_ID];
+<span class="lineNum">      50 </span>            : 
+<span class="lineNum">      51 </span>            : /**
+<span class="lineNum">      52 </span>            :  * Allocates the memory associated with an MSU structure
+<a name="53"><span class="lineNum">      53 </span>            :  * @return Pointer to allocated MSU</a>
+<span class="lineNum">      54 </span>            :  */
+<span class="lineNum">      55 </span><span class="lineCov">          8 : static struct local_msu *msu_alloc() {</span>
+<span class="lineNum">      56 </span><span class="lineCov">          8 :     struct local_msu *msu = calloc(1, sizeof(*msu));</span>
+<span class="lineNum">      57 </span><span class="lineCov">          8 :     if (msu == NULL) {</span>
+<span class="lineNum">      58 </span><span class="lineNoCov">          0 :         log_error(&quot;Failed to allocate MSU&quot;);</span>
+<span class="lineNum">      59 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">      60 </span>            :     }
+<span class="lineNum">      61 </span><span class="lineCov">          8 :     return msu;</span>
+<span class="lineNum">      62 </span>            : }
+<span class="lineNum">      63 </span>            : 
+<span class="lineNum">      64 </span>            : /**
+<span class="lineNum">      65 </span>            :  * Frees the memory associated with an MSU structure,
+<a name="66"><span class="lineNum">      66 </span>            :  * including any routes, messages in its queue, or states</a>
+<span class="lineNum">      67 </span>            :  */
+<span class="lineNum">      68 </span><span class="lineCov">          2 : static void msu_free(struct local_msu *msu) {</span>
+<span class="lineNum">      69 </span><span class="lineCov">          2 :     struct msu_msg *msg = dequeue_msu_msg(&amp;msu-&gt;queue);</span>
+<span class="lineNum">      70 </span><span class="lineCov">          4 :     while (msg != NULL) {</span>
+<span class="lineNum">      71 </span><span class="lineNoCov">          0 :         if (msg-&gt;data_size &gt; 0) {</span>
+<span class="lineNum">      72 </span><span class="lineNoCov">          0 :             free(msg-&gt;data);</span>
+<span class="lineNum">      73 </span>            :         }
+<span class="lineNum">      74 </span><span class="lineNoCov">          0 :         free(msg);</span>
+<span class="lineNum">      75 </span><span class="lineNoCov">          0 :         msg = dequeue_msu_msg(&amp;msu-&gt;queue);</span>
+<span class="lineNum">      76 </span>            :     }
+<span class="lineNum">      77 </span><span class="lineCov">          2 :     msu_free_all_state(msu);</span>
+<span class="lineNum">      78 </span><span class="lineCov">          2 :     free(msu-&gt;routes.routes);</span>
+<span class="lineNum">      79 </span><span class="lineCov">          2 :     free(msu);</span>
+<span class="lineNum">      80 </span><span class="lineCov">          2 : }</span>
+<span class="lineNum">      81 </span>            : 
+<span class="lineNum">      82 </span>            : /**
+<span class="lineNum">      83 </span>            :  * Removes an MSU from the local MSU registry
+<span class="lineNum">      84 </span>            :  * @param id ID of the MSU to remove
+<a name="85"><span class="lineNum">      85 </span>            :  * @return 0 on success, -1 on error</a>
+<span class="lineNum">      86 </span>            :  */
+<span class="lineNum">      87 </span><span class="lineCov">          4 : static int rm_from_local_registry(int id) {</span>
+<span class="lineNum">      88 </span><span class="lineCov">          4 :     if (pthread_rwlock_wrlock(&amp;msu_registry_lock) != 0) {</span>
+<span class="lineNum">      89 </span><span class="lineNoCov">          0 :         log_perror(&quot;Error opening write lock on msu registry&quot;);</span>
+<span class="lineNum">      90 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">      91 </span>            :     }
+<span class="lineNum">      92 </span><span class="lineCov">          4 :     int rtn = 0;</span>
+<span class="lineNum">      93 </span><span class="lineCov">          4 :     if (local_msu_registry[id] == NULL) {</span>
+<span class="lineNum">      94 </span><span class="lineCov">          1 :         log_warn(&quot;MSU with id %d does not exist and cannot be deleted&quot;, id);</span>
+<span class="lineNum">      95 </span><span class="lineCov">          1 :         rtn = -1;</span>
+<span class="lineNum">      96 </span>            :     } else {
+<span class="lineNum">      97 </span><span class="lineCov">          3 :         local_msu_registry[id] = NULL;</span>
+<span class="lineNum">      98 </span>            :     }
+<span class="lineNum">      99 </span><span class="lineCov">          4 :     if (pthread_rwlock_unlock(&amp;msu_registry_lock) != 0) {</span>
+<span class="lineNum">     100 </span><span class="lineNoCov">          0 :         log_perror(&quot;Error unlocking msu registry&quot;);</span>
+<span class="lineNum">     101 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     102 </span>            :     }
+<span class="lineNum">     103 </span><span class="lineCov">          4 :     return rtn;</span>
+<span class="lineNum">     104 </span>            : }
+<span class="lineNum">     105 </span>            : 
+<span class="lineNum">     106 </span>            : /**
+<span class="lineNum">     107 </span>            :  * Adds an MSU to the local registry so it can be referred to elsewhere by ID
+<span class="lineNum">     108 </span>            :  * @param MSU the local MSU to add to the registry
+<a name="109"><span class="lineNum">     109 </span>            :  * @return 0 on success, -1 on error</a>
+<span class="lineNum">     110 </span>            :  */
+<span class="lineNum">     111 </span><span class="lineCov">         10 : static int add_to_local_registry(struct local_msu *msu) {</span>
+<span class="lineNum">     112 </span><span class="lineCov">         10 :     if (pthread_rwlock_wrlock(&amp;msu_registry_lock) != 0) {</span>
+<span class="lineNum">     113 </span><span class="lineNoCov">          0 :         log_perror(&quot;Error opening write lock on msu registry&quot;);</span>
+<span class="lineNum">     114 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     115 </span>            :     }
+<span class="lineNum">     116 </span><span class="lineCov">         10 :     int rtn = 0;</span>
+<span class="lineNum">     117 </span><span class="lineCov">         10 :     if (local_msu_registry[msu-&gt;id] != NULL) {</span>
+<span class="lineNum">     118 </span><span class="lineCov">          1 :         log_error(&quot;MSU with id %d already exists and cannot be added to registry&quot;, msu-&gt;id);</span>
+<span class="lineNum">     119 </span><span class="lineCov">          1 :         rtn = -1;</span>
+<span class="lineNum">     120 </span>            :     } else {
+<span class="lineNum">     121 </span><span class="lineCov">          9 :         local_msu_registry[msu-&gt;id] = msu;</span>
+<span class="lineNum">     122 </span>            :     }
+<span class="lineNum">     123 </span><span class="lineCov">         10 :     if (pthread_rwlock_unlock(&amp;msu_registry_lock) != 0) {</span>
+<span class="lineNum">     124 </span><span class="lineNoCov">          0 :         log_perror(&quot;Error unlocking msu registry&quot;);</span>
+<span class="lineNum">     125 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     126 </span>            :     }
+<span class="lineNum">     127 </span><span class="lineCov">         10 :     return rtn;</span>
+<span class="lineNum">     128 </span>            : }
+<a name="129"><span class="lineNum">     129 </span>            : </a>
+<span class="lineNum">     130 </span>            : 
+<span class="lineNum">     131 </span><span class="lineCov">          4 : struct local_msu *get_local_msu(unsigned int id) {</span>
+<span class="lineNum">     132 </span><span class="lineCov">          4 :     if (id &gt;= MAX_MSU_ID) {</span>
+<span class="lineNum">     133 </span><span class="lineNoCov">          0 :         log_error(&quot;MSU id %u too high!&quot;, id);</span>
+<span class="lineNum">     134 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     135 </span>            :     }
+<span class="lineNum">     136 </span><span class="lineCov">          4 :     if (pthread_rwlock_rdlock(&amp;msu_registry_lock) != 0) {</span>
+<span class="lineNum">     137 </span><span class="lineNoCov">          0 :         log_perror(&quot;Error opening read lock on MSU registry&quot;);</span>
+<span class="lineNum">     138 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     139 </span>            :     }
+<span class="lineNum">     140 </span><span class="lineCov">          4 :     struct local_msu *msu = local_msu_registry[id];</span>
+<span class="lineNum">     141 </span><span class="lineCov">          4 :     if (pthread_rwlock_unlock(&amp;msu_registry_lock) != 0) {</span>
+<span class="lineNum">     142 </span><span class="lineNoCov">          0 :         log_perror(&quot;Error unlocking msu registry&quot;);</span>
+<span class="lineNum">     143 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     144 </span>            :     }
+<span class="lineNum">     145 </span><span class="lineCov">          4 :     if (msu == NULL) {</span>
+<span class="lineNum">     146 </span><span class="lineCov">          1 :         log_error(&quot;Could not get local msu with id %d. Not registered.&quot;, id);</span>
+<span class="lineNum">     147 </span>            :     }
+<span class="lineNum">     148 </span><span class="lineCov">          4 :     return msu;</span>
+<span class="lineNum">     149 </span>            : }
+<span class="lineNum">     150 </span>            : 
+<span class="lineNum">     151 </span>            : /** The stat IDs that are associated with an MSU, to be registered on MSU creation */
+<span class="lineNum">     152 </span>            : static enum stat_id MSU_STAT_IDS[] = {
+<span class="lineNum">     153 </span>            :     MSU_QUEUE_LEN,
+<span class="lineNum">     154 </span>            :     MSU_ITEMS_PROCESSED,
+<span class="lineNum">     155 </span>            :     MSU_EXEC_TIME,
+<span class="lineNum">     156 </span>            :     MSU_IDLE_TIME,
+<span class="lineNum">     157 </span>            :     MSU_MEM_ALLOC,
+<span class="lineNum">     158 </span>            :     MSU_NUM_STATES
+<span class="lineNum">     159 </span>            : };
+<span class="lineNum">     160 </span>            : 
+<span class="lineNum">     161 </span>            : #define NUM_MSU_STAT_IDS sizeof(MSU_STAT_IDS) / sizeof(enum stat_id)
+<span class="lineNum">     162 </span>            : 
+<span class="lineNum">     163 </span>            : /**
+<span class="lineNum">     164 </span>            :  * Initializes the stat IDS that are relevant to an MSU
+<a name="165"><span class="lineNum">     165 </span>            :  * @param msu_id ID of the msu to register</a>
+<span class="lineNum">     166 </span>            :   */
+<span class="lineNum">     167 </span><span class="lineCov">          8 : static void init_msu_stats(int msu_id) {</span>
+<span class="lineNum">     168 </span><span class="lineCov">         56 :     for (int i=0; i&lt;NUM_MSU_STAT_IDS; i++) {</span>
+<span class="lineNum">     169 </span><span class="lineCov">         48 :         if (init_stat_item(MSU_STAT_IDS[i], msu_id) != 0) {</span>
+<span class="lineNum">     170 </span><span class="lineNoCov">          0 :             log_warn(&quot;Could not initialize stat item %d for msu %d&quot;, MSU_STAT_IDS[i], msu_id);</span>
+<span class="lineNum">     171 </span>            :         }
+<span class="lineNum">     172 </span>            :     }
+<span class="lineNum">     173 </span><span class="lineCov">          8 : }</span>
+<span class="lineNum">     174 </span>            : 
+<span class="lineNum">     175 </span>            : /**
+<span class="lineNum">     176 </span>            :  * Unregisters the stat IDS that are relevant to an MSU
+<a name="177"><span class="lineNum">     177 </span>            :  * @param msu_id ID of the MSU to register</a>
+<span class="lineNum">     178 </span>            :  */
+<span class="lineNum">     179 </span><span class="lineCov">          2 : static void unregister_msu_stats(int msu_id) {</span>
+<span class="lineNum">     180 </span><span class="lineCov">         14 :     for (int i=0; i &lt; NUM_MSU_STAT_IDS; i++) {</span>
+<span class="lineNum">     181 </span><span class="lineCov">         12 :         if (remove_stat_item(MSU_STAT_IDS[i], msu_id) != 0) {</span>
+<span class="lineNum">     182 </span><span class="lineNoCov">          0 :             log_warn(&quot;Could not remove stat item %d for msu %d&quot;,</span>
+<span class="lineNum">     183 </span>            :                      MSU_STAT_IDS[i], msu_id);
+<span class="lineNum">     184 </span>            :         }
+<span class="lineNum">     185 </span>            :     }
+<a name="186"><span class="lineNum">     186 </span><span class="lineCov">          2 : }</span></a>
+<span class="lineNum">     187 </span>            : 
+<span class="lineNum">     188 </span><span class="lineCov">          8 : struct local_msu *init_msu(unsigned int id,</span>
+<span class="lineNum">     189 </span>            :                            struct msu_type *type,
+<span class="lineNum">     190 </span>            :                            struct worker_thread *thread,
+<span class="lineNum">     191 </span>            :                            struct msu_init_data *data) {
+<span class="lineNum">     192 </span><span class="lineCov">          8 :     struct local_msu *msu = msu_alloc();</span>
+<span class="lineNum">     193 </span><span class="lineCov">          8 :     init_msu_stats(id);</span>
+<span class="lineNum">     194 </span><span class="lineCov">          8 :     msu-&gt;thread = thread;</span>
+<span class="lineNum">     195 </span><span class="lineCov">          8 :     msu-&gt;id = id;</span>
+<span class="lineNum">     196 </span><span class="lineCov">          8 :     msu-&gt;type = type;</span>
+<span class="lineNum">     197 </span><span class="lineCov">          8 :     msu-&gt;scheduling_weight = 0;</span>
+<span class="lineNum">     198 </span>            : 
+<span class="lineNum">     199 </span><span class="lineCov">          8 :     if (init_msg_queue(&amp;msu-&gt;queue, &amp;thread-&gt;thread-&gt;sem) != 0) {</span>
+<span class="lineNum">     200 </span><span class="lineNoCov">          0 :         msu_free(msu);</span>
+<span class="lineNum">     201 </span><span class="lineNoCov">          0 :         log_error(&quot;Error initializing msu queue&quot;);</span>
+<span class="lineNum">     202 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     203 </span>            :     }
+<span class="lineNum">     204 </span>            : 
+<span class="lineNum">     205 </span>            :     // Must be done before running init function, or the msu cannot enqueue to itself
+<span class="lineNum">     206 </span><span class="lineCov">          8 :     int rtn = register_msu_with_thread(msu);</span>
+<span class="lineNum">     207 </span><span class="lineCov">          8 :     if (rtn &lt; 0) {</span>
+<span class="lineNum">     208 </span><span class="lineNoCov">          0 :         log_error(&quot;Error registering MSU With thread&quot;);</span>
+<span class="lineNum">     209 </span><span class="lineNoCov">          0 :         msu_free(msu);</span>
+<span class="lineNum">     210 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     211 </span>            :     }
+<span class="lineNum">     212 </span>            : 
+<span class="lineNum">     213 </span>            :     // TODO: Unregister if creation fails
+<span class="lineNum">     214 </span><span class="lineCov">          8 :     log_info(&quot;Initializing msu (ID: %d, type: %s, data: '%s')&quot;, id, type-&gt;name,</span>
+<span class="lineNum">     215 </span>            :              data-&gt;init_data);
+<span class="lineNum">     216 </span>            : 
+<span class="lineNum">     217 </span>            :     // Run the MSU's type-specific init function if it has one
+<span class="lineNum">     218 </span><span class="lineCov">          8 :     if (type-&gt;init) {</span>
+<span class="lineNum">     219 </span><span class="lineCov">          5 :         if (type-&gt;init(msu, data) != 0) {</span>
+<span class="lineNum">     220 </span><span class="lineNoCov">          0 :             log_error(&quot;Error running MSU %d (type: %s) type-specific initialization function&quot;,</span>
+<span class="lineNum">     221 </span>            :                       id, type-&gt;name);
+<span class="lineNum">     222 </span><span class="lineNoCov">          0 :             unregister_msu_with_thread(msu);</span>
+<span class="lineNum">     223 </span><span class="lineNoCov">          0 :             msu_free(msu);</span>
+<span class="lineNum">     224 </span><span class="lineNoCov">          0 :             return NULL;</span>
+<span class="lineNum">     225 </span>            :         }
+<span class="lineNum">     226 </span>            :     }
+<span class="lineNum">     227 </span>            : 
+<span class="lineNum">     228 </span><span class="lineCov">          8 :     rtn = add_to_local_registry(msu);</span>
+<span class="lineNum">     229 </span><span class="lineCov">          8 :     if (rtn &lt; 0) {</span>
+<span class="lineNum">     230 </span><span class="lineNoCov">          0 :         log_error(&quot;Error adding MSU to local registry&quot;);</span>
+<span class="lineNum">     231 </span><span class="lineNoCov">          0 :         msu_free(msu);</span>
+<span class="lineNum">     232 </span><span class="lineNoCov">          0 :         unregister_msu_with_thread(msu);</span>
+<span class="lineNum">     233 </span><span class="lineNoCov">          0 :         return NULL;</span>
+<span class="lineNum">     234 </span>            :     }
+<span class="lineNum">     235 </span>            : 
+<span class="lineNum">     236 </span><span class="lineCov">          8 :     return msu;</span>
+<a name="237"><span class="lineNum">     237 </span>            : }</a>
+<span class="lineNum">     238 </span>            : 
+<span class="lineNum">     239 </span><span class="lineNoCov">          0 : int try_destroy_msu(struct local_msu *msu) {</span>
+<span class="lineNum">     240 </span><span class="lineNoCov">          0 :     if (msu_num_states(msu) &gt; 0) {</span>
+<span class="lineNum">     241 </span><span class="lineNoCov">          0 :         return 1;</span>
+<span class="lineNum">     242 </span>            :     }
+<span class="lineNum">     243 </span><span class="lineNoCov">          0 :     destroy_msu(msu);</span>
+<span class="lineNum">     244 </span><span class="lineNoCov">          0 :     return 0;</span>
+<a name="245"><span class="lineNum">     245 </span>            : }</a>
+<span class="lineNum">     246 </span>            : 
+<span class="lineNum">     247 </span><span class="lineCov">          2 : void destroy_msu(struct local_msu *msu) {</span>
+<span class="lineNum">     248 </span><span class="lineCov">          2 :     int id = msu-&gt;id;</span>
+<span class="lineNum">     249 </span><span class="lineCov">          2 :     char *type = msu-&gt;type-&gt;name;</span>
+<span class="lineNum">     250 </span><span class="lineCov">          2 :     unregister_msu_stats(msu-&gt;id);</span>
+<span class="lineNum">     251 </span><span class="lineCov">          2 :     if (msu-&gt;type-&gt;destroy) {</span>
+<span class="lineNum">     252 </span><span class="lineCov">          1 :         msu-&gt;type-&gt;destroy(msu);</span>
+<span class="lineNum">     253 </span>            :     }
+<span class="lineNum">     254 </span><span class="lineCov">          2 :     msu_free(msu);</span>
+<span class="lineNum">     255 </span><span class="lineCov">          2 :     rm_from_local_registry(id);</span>
+<span class="lineNum">     256 </span><span class="lineCov">          2 :     log_info(&quot;Removed msu (ID: %d, Type: %s)&quot;, id, type);</span>
+<span class="lineNum">     257 </span><span class="lineCov">          2 : }</span>
+<span class="lineNum">     258 </span>            : 
+<span class="lineNum">     259 </span>            : /**
+<span class="lineNum">     260 </span>            :  * Calls type-specific MSU receive function and records execution time
+<span class="lineNum">     261 </span>            :  * @param msu MSU to receive data
+<span class="lineNum">     262 </span>            :  * @param data Data to be sent to MSU
+<a name="263"><span class="lineNum">     263 </span>            :  * @return 0 on success, -1 on error</a>
+<span class="lineNum">     264 </span>            :  */
+<span class="lineNum">     265 </span><span class="lineCov">          2 : static int msu_receive(struct local_msu *msu, struct msu_msg *msg) {</span>
+<span class="lineNum">     266 </span>            : 
+<span class="lineNum">     267 </span><span class="lineCov">          2 :     record_end_time(MSU_IDLE_TIME, msu-&gt;id);</span>
+<span class="lineNum">     268 </span><span class="lineCov">          2 :     record_start_time(MSU_EXEC_TIME, msu-&gt;id);</span>
+<span class="lineNum">     269 </span><span class="lineCov">          2 :     int rtn = msu-&gt;type-&gt;receive(msu, msg);</span>
+<span class="lineNum">     270 </span><span class="lineCov">          2 :     record_end_time(MSU_EXEC_TIME, msu-&gt;id);</span>
+<span class="lineNum">     271 </span><span class="lineCov">          2 :     record_start_time(MSU_IDLE_TIME, msu-&gt;id);</span>
+<span class="lineNum">     272 </span>            : 
+<span class="lineNum">     273 </span><span class="lineCov">          2 :     if (rtn != 0) {</span>
+<span class="lineNum">     274 </span><span class="lineNoCov">          0 :         log_error(&quot;Error executing MSU %d (%s) receive function&quot;,</span>
+<span class="lineNum">     275 </span>            :                   msu-&gt;id, msu-&gt;type-&gt;name);
+<span class="lineNum">     276 </span><span class="lineNoCov">          0 :         return -1;</span>
+<span class="lineNum">     277 </span>            :     }
+<span class="lineNum">     278 </span><span class="lineCov">          2 :     return 0;</span>
+<a name="279"><span class="lineNum">     279 </span>            : }</a>
+<span class="lineNum">     280 </span>            : 
+<span class="lineNum">     281 </span><span class="lineCov">          2 : int msu_dequeue(struct local_msu *msu) {</span>
+<span class="lineNum">     282 </span><span class="lineCov">          2 :     struct msu_msg *msg = dequeue_msu_msg(&amp;msu-&gt;queue);</span>
+<span class="lineNum">     283 </span><span class="lineCov">          2 :     if (msg) {</span>
+<span class="lineNum">     284 </span><span class="lineCov">          1 :         log(LOG_MSU_DEQUEUES, &quot;Dequeued MSU message %p for msu %d&quot;, msg, msu-&gt;id);</span>
+<span class="lineNum">     285 </span><span class="lineCov">          1 :         record_stat(MSU_QUEUE_LEN, msu-&gt;id, msu-&gt;queue.num_msgs, false);</span>
+<span class="lineNum">     286 </span><span class="lineCov">          1 :         int rtn = msu_receive(msu, msg);</span>
+<span class="lineNum">     287 </span><span class="lineCov">          1 :         increment_stat(MSU_ITEMS_PROCESSED, msu-&gt;id, 1);</span>
+<span class="lineNum">     288 </span><span class="lineCov">          1 :         free(msg);</span>
+<span class="lineNum">     289 </span><span class="lineCov">          1 :         return rtn;</span>
+<span class="lineNum">     290 </span>            :     }
+<span class="lineNum">     291 </span><span class="lineCov">          1 :     return 1;</span>
+<span class="lineNum">     292 </span>            : }
+<span class="lineNum">     293 </span>            : 
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.10</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
